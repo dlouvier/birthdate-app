@@ -53,6 +53,12 @@ def get_user_birthdate(username):
     key = client.key(DATASTORE_KIND, username)
     entity = client.get(key)
 
+    if entity == None:
+        return (json.dumps(
+                        { 'error': 'Username ({}) does not exist in the database.'.format(username) }
+                    ),404
+                )
+
     birthdate = datetime.strptime(entity['dateOfBirth'], "%Y-%m-%d")
     today = datetime.today()
 
