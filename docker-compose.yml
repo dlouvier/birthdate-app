@@ -9,8 +9,10 @@ services:
     environment:
         CLOUDSDK_CORE_PROJECT: 1
       
-  functions_framework:
+  app:
     build: .
+    ports:
+      - "8080:8080"
     volumes:
         - .:/project
     environment:
@@ -19,5 +21,3 @@ services:
         DATASTORE_EMULATOR_HOST_PATH: datastore:8081/datastore
         DATASTORE_HOST: http://datastore:8081
         DATASTORE_PROJECT_ID: 1
-        
-        
