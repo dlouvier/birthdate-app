@@ -1,0 +1,2 @@
+testcontainers==3.4.1
+functions-framework==2.2.1
