@@ -1,0 +1,23 @@
+version: '3'
+
+services:
+  datastore:
+    image: "google/cloud-sdk:347.0.0" 
+    ports:
+      - "8081:8081"
+    command: gcloud beta emulators datastore start --host-port 0.0.0.0:8081
+    environment:
+        CLOUDSDK_CORE_PROJECT: 1
+      
+  functions_framework:
+    build: .
+    volumes:
+        - .:/project
+    environment:
+        DATASTORE_DATASET: 1
+        DATASTORE_EMULATOR_HOST: datastore:8081
+        DATASTORE_EMULATOR_HOST_PATH: datastore:8081/datastore
+        DATASTORE_HOST: http://datastore:8081
+        DATASTORE_PROJECT_ID: 1
+        
+        
