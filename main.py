@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 from google.cloud import datastore
 import re
+import sys
 
 PATH_REGEX = '^/hello/[a-z]*$'
 DATE_FORMAT = '%Y-%m-%d'
@@ -27,66 +28,71 @@ def app(request: Request):
 
         elif request.method == 'PUT':
             try:
-                args = request.get_json(silent=True)
+                args = request.get_json()
                 date_of_birth = datetime.strptime(args['dateOfBirth'], DATE_FORMAT)
-            except Exception as e:
-                print(e)
-                return (json.dumps(
-                            { 'error': 'dateOfBirth is missing or format is not %Y-%m-%d' }
-                        ),405
-                    )
+            except Exception as err:
+                print(err)
+                sys.stdout.flush()
+                return response_helper(405,'dateOfBirth is missing or format is not %Y-%m-%d')
 
             return put_user_birthdate(username,date_of_birth)
         else:
-            return (json.dumps(
-                            { 'error': 'Only GET and PUT HTTP method are allowed.' }
-                        ),405
-                    )
+            return response_helper(405, 'Only GET and PUT HTTP method are allowed.')
+
     else:
-        return (json.dumps(
-                        { 'error': 'URL Format is not correct.' }
-                    ),405
-                )
+        return response_helper(405, 'URL Format is not correct.')
 
 def get_user_birthdate(username):
-    client = datastore.Client()
-    key = client.key(DATASTORE_KIND, username)
-    entity = client.get(key)
+    try:  
+        client = datastore.Client()
+        key = client.key(DATASTORE_KIND, username)
+        entity = client.get(key)
+    except Exception as err:
+        print(err)
+        sys.stdout.flush()
+        return response_helper(500, 'Internal error.')
 
     if entity == None:
-        return (json.dumps(
-                        { 'error': 'Username ({}) does not exist in the database.'.format(username) }
-                    ),404
-                )
+        return response_helper(404, 'Username ({}) does not exist in the database.'.format(username))
 
     birthdate = datetime.strptime(entity['dateOfBirth'], "%Y-%m-%d")
     today = datetime.today()
 
     # Calculate if today is the same day of the birthdate or already passed this year
     if datetime(2000,today.month,today.day) == datetime(2000,birthdate.month,birthdate.day):
-        return json.dumps(
-            { 'message': 'Hello, {}! Happy birthday!'.format(username) }
-        )
+        return response_helper(200,'Hello, {}! Happy birthday!'.format(username))
     elif datetime(2000,today.month,today.day) > datetime(2000,birthdate.month,birthdate.day):
         delta = datetime(2000,today.month,today.day) - datetime(2000,birthdate.month,birthdate.day)
     elif datetime(2000,today.month,today.day) < datetime(2000,birthdate.month,birthdate.day):
         delta = datetime(2000,birthdate.month,birthdate.day) - datetime(2000,today.month,today.day)
 
-    return json.dumps(
-        { 'message': 'Hello, {}! Your birthday is in {} day(s)'.format(username,delta.days) }
-    )
+    return response_helper(200,'Hello, {}! Your birthday is in {} day(s)'.format(username,delta.days)) 
 
 def put_user_birthdate(username: str, date_of_birth: datetime):
     delta = date_of_birth - datetime.today()
 
     if delta.days >= 0:
-        return "Date is NOT correct"
+        return response_helper(400, 'Username dateOfBirth ({}) cannot be in the future'.format(date_of_birth))
     
-    client = datastore.Client()
-
-    birthdate = datastore.Entity(key=client.key(DATASTORE_KIND,username))
-    birthdate['dateOfBirth'] = date_of_birth.strftime(DATE_FORMAT)
-
-    client.put(birthdate)
+    try:
+        client = datastore.Client()
+        birthdate = datastore.Entity(key=client.key(DATASTORE_KIND,username))
+        birthdate['dateOfBirth'] = date_of_birth.strftime(DATE_FORMAT)
+        client.put(birthdate)
+    except Exception as err:
+        print(err)
+        sys.stdout.flush()
+        return response_helper(500, 'Internal error.')
 
     return ('', 204)
+
+def response_helper(code, msg):
+    if (code >= 200) and (code < 300):
+        response_type = "message"
+    else:
+        response_type = "error"
+
+    return (json.dumps(
+                    { response_type: msg }
+                ), code
+            )
