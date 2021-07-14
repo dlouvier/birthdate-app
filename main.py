@@ -59,6 +59,7 @@ def get_user_birthdate(username):
     today = datetime.today()
 
     # Calculate if today is the same day of the birthdate or already passed this year
+    # Using year 2000 as it is a leap year, in case the date introduced is 02/29
     if datetime(2000,today.month,today.day) == datetime(2000,birthdate.month,birthdate.day):
         return response_helper(200,'Hello, {}! Happy birthday!'.format(username))
     elif datetime(2000,today.month,today.day) > datetime(2000,birthdate.month,birthdate.day):
